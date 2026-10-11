@@ -121,6 +121,17 @@
     }
     .tab:hover { border-color: transparent; color: var(--text); }
     .tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--blue); }
+    .project-link { color: var(--blue); cursor: pointer; font-weight: 600; }
+    .project-link:hover { text-decoration: underline; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .bar { width: 100%; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; margin: 6px 0; }
+    .bar span { display: block; height: 100%; background: var(--blue); }
+    h3 { font-size: 14px; margin: 20px 0 8px; }
     [hidden] { display: none !important; }
   </style>
 </head>
@@ -168,6 +179,11 @@
         <button id="drillClose">Close</button>
       </div>
       <div id="drillBody"></div>
+    </section>
+
+    <!-- Project detail panel, opened by clicking a project name -->
+    <section class="card" id="detail" hidden>
+      <div id="detailBody"></div>
     </section>
 
     <!-- 2. Project status breakdown and development cost -->
@@ -295,7 +311,7 @@
           <tbody>
             ${list.map(p => `
               <tr>
-                <td><strong>${p.name}</strong><br><span class="note">${p.id}</span></td>
+                <td><span class="project-link" data-project="${p.id}">${p.name}</span><br><span class="note">${p.id}</span></td>
                 <td>${p.owner}</td>
                 <td>${p.requestDate}</td>
                 <td>${p.requestingDepartment}</td>
@@ -389,7 +405,7 @@
         return `
           <div class="stage">
             <div class="stage-name">${stage} <span class="count">(${list.length})</span></div>
-            ${list.map(p => `<span class="project-tag ${holdOrDone(p)}">${p.name}</span>`).join("") || `<span class="note">None</span>`}
+            ${list.map(p => `<span class="project-tag project-link ${holdOrDone(p)}" data-project="${p.id}">${p.name}</span>`).join("") || `<span class="note">None</span>`}
           </div>`;
       }).join("");
     }
@@ -426,7 +442,7 @@
 
       document.getElementById("manpowerRows").innerHTML = D.projects.map(p => `
         <tr>
-          <td><strong>${p.name}</strong></td>
+          <td><span class="project-link" data-project="${p.id}">${p.name}</span></td>
           <td class="${p.coordinator ? "" : "unassigned"}">${p.coordinator || "Unassigned"}</td>
           <td class="${p.deliveryLead ? "" : "unassigned"}">${p.deliveryLead || "Unassigned"}</td>
           <td class="${p.techLead ? "" : "unassigned"}">${p.techLead || "Unassigned"}</td>
@@ -486,6 +502,70 @@
     });
 
     showTab(location.hash === "#pipeline" ? "pipeline" : "summary");
+
+    // ---- Project detail panel ----
+    function detailField(label, value) {
+      return `
+        <div>
+          <div class="kpi-label">${label}</div>
+          <div>${value || '<span class="unassigned">Unassigned</span>'}</div>
+        </div>`;
+    }
+
+    function openDetail(id) {
+      const p = projectById(id);
+      if (!p) return;
+      const actions = D.actionItems.filter(a => a.projectId === id);
+
+      document.getElementById("detailBody").innerHTML = `
+        <div class="drill-head">
+          <h2>${p.name} <span class="note">(${p.id})</span></h2>
+          <button data-close-detail>Close</button>
+        </div>
+
+        <div class="detail-grid">
+          ${detailField("Owner", p.owner)}
+          ${detailField("Requesting department", p.requestingDepartment)}
+          ${detailField("Request date", p.requestDate)}
+          ${detailField("Project type", p.projectType)}
+          ${detailField("Delivery team", p.deliveryTeam)}
+          ${detailField("Status", `<span class="pill ${cls(p.state)}">${p.state}</span>`)}
+        </div>
+
+        <h3>Ownership</h3>
+        <div class="detail-grid">
+          ${detailField("Project coordinator", p.coordinator)}
+          ${detailField("Delivery lead", p.deliveryLead)}
+          ${detailField("Tech lead", p.techLead)}
+          ${detailField("Developers assigned", p.developers.join(", "))}
+        </div>
+
+        <h3>Delivery progress</h3>
+        <p>Current stage: <strong>${p.stage}</strong> (stage ${stageIndex(p.stage) + 1} of ${D.stages.length})</p>
+        <div class="bar"><span style="width:${p.progress}%"></span></div>
+        <p class="note">${p.progress}% complete &middot; Development cost ${money(p.developmentCost)}</p>
+
+        <h3>PMO action items</h3>
+        ${actions.length ? actionTable(actions) : '<div class="empty-msg">No action items for this project.</div>'}
+      `;
+
+      document.getElementById("detail").hidden = false;
+      document.getElementById("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // One click handler for everything dynamic: project names, close buttons
+    document.addEventListener("click", e => {
+      const link = e.target.closest("[data-project]");
+      if (link) {
+        // Clicking a project in the pipeline switches to the summary tab first
+        if (link.closest('[data-tab="pipeline"]')) showTab("summary");
+        openDetail(link.dataset.project);
+        return;
+      }
+      if (e.target.closest("[data-close-detail]")) {
+        document.getElementById("detail").hidden = true;
+      }
+    });
   </script>
 </body>
 </html>
