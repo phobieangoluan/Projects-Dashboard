@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delivery Team Dashboard</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #6b7785;
+      --border: #e4e8ee;
+      --green: #2e9e5b;
+      --amber: #e0a100;
+      --red: #d64545;
+      --blue: #2f6fdb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 20px 32px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    main { padding: 24px 32px; max-width: 1200px; margin: 0 auto; }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+    .kpi-label { font-size: 13px; color: var(--muted); }
+    .kpi-value { font-size: 26px; font-weight: 600; margin-top: 6px; }
+    .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+    input, select {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    input { flex: 1; max-width: 280px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+    th {
+      cursor: pointer;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      user-select: none;
+    }
+    th:hover { color: var(--text); }
+    .progress {
+      width: 100px; height: 8px; background: var(--border);
+      border-radius: 4px; overflow: hidden; display: inline-block;
+      vertical-align: middle; margin-right: 8px;
+    }
+    .progress span { display: block; height: 100%; background: var(--blue); }
+    .pill {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; color: #fff;
+    }
+    .pill.on-track { background: var(--green); }
+    .pill.at-risk { background: var(--amber); }
+    .pill.delayed { background: var(--red); }
+    .pill.completed { background: var(--blue); }
+    .over { color: var(--red); font-weight: 600; }
+    .empty { text-align: center; color: var(--muted); padding: 24px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Delivery Team Dashboard</h1>
+    <p>Projects, costing, and delivery status at a glance</p>
+  </header>
+
+  <main>
+    <!-- Layer 1: KPI cards -->
+    <section class="kpis" id="kpis"></section>
+
+    <!-- Layer 2: project summary table -->
+    <section>
+      <h2>Projects</h2>
+      <div class="panel">
+        <div class="toolbar">
+          <input type="search" id="search" placeholder="Search by name, client, or owner" />
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option>On Track</option>
+            <option>At Risk</option>
+            <option>Delayed</option>
+            <option>Completed</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th data-key="name">Project</th>
+              <th data-key="owner">Owner</th>
+              <th data-key="stage">Stage</th>
+              <th data-key="status">Status</th>
+              <th data-key="percentComplete">Progress</th>
+              <th data-key="budget">Budget</th>
+              <th data-key="actual">Actual</th>
+              <th data-key="targetEnd">Target end</th>
+            </tr>
+          </thead>
+          <tbody id="projectRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script>
+    const data = window.DASHBOARD_DATA;
+    let sortKey = "name";
+    let sortAsc = true;
+
+    const money = n => "₱" + Number(n).toLocaleString("en-PH");
+    const statusClass = s => s.toLowerCase().replace(/\s+/g, "-");
+
+    // Layer 1: KPI cards computed from the data
+    function renderKpis(projects) {
+      const total = projects.length;
+      const onTrack = projects.filter(p => p.status === "On Track").length;
+      const atRisk = projects.filter(p => p.status === "At Risk" || p.status === "Delayed").length;
+      const budget = projects.reduce((sum, p) => sum + p.budget, 0);
+      const actual = projects.reduce((sum, p) => sum + p.actual, 0);
+      const avg = total ? Math.round(projects.reduce((s, p) => s + p.percentComplete, 0) / total) : 0;
+      const spendPct = budget ? Math.round((actual / budget) * 100) : 0;
+
+      document.getElementById("kpis").innerHTML = `
+        <div class="kpi">
+          <div class="kpi-label">Total projects</div>
+          <div class="kpi-value">${total}</div>
+          <div class="kpi-sub">${onTrack} on track</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Needs attention</div>
+          <div class="kpi-value">${atRisk}</div>
+          <div class="kpi-sub">At risk or delayed</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Budget spent</div>
+          <div class="kpi-value">${spendPct}%</div>
+          <div class="kpi-sub">${money(actual)} of ${money(budget)}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Average progress</div>
+          <div class="kpi-value">${avg}%</div>
+          <div class="kpi-sub">Across all projects</div>
+        </div>
+      `;
+    }
+
+    // Layer 2: filterable, sortable project table
+    function renderTable() {
+      const query = document.getElementById("search").value.toLowerCase();
+      const statusFilter = document.getElementById("statusFilter").value;
+
+      let rows = data.projects.filter(p => {
+        const matchesText = [p.name, p.client, p.owner].join(" ").toLowerCase().includes(query);
+        const matchesStatus = !statusFilter || p.status === statusFilter;
+        return matchesText && matchesStatus;
+      });
+
+      rows.sort((a, b) => {
+        const av = a[sortKey], bv = b[sortKey];
+        if (av < bv) return sortAsc ? -1 : 1;
+        if (av > bv) return sortAsc ? 1 : -1;
+        return 0;
+      });
+
+      const tbody = document.getElementById("projectRows");
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty">No projects match your filters.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map(p => `
+        <tr>
+          <td><strong>${p.name}</strong><br><span style="color:var(--muted);font-size:12px">${p.client}</span></td>
+          <td>${p.owner}</td>
+          <td>${p.stage}</td>
+          <td><span class="pill ${statusClass(p.status)}">${p.status}</span></td>
+          <td>
+            <span class="progress"><span style="width:${p.percentComplete}%"></span></span>
+            ${p.percentComplete}%
+          </td>
+          <td>${money(p.budget)}</td>
+          <td class="${p.actual > p.budget ? "over" : ""}">${money(p.actual)}</td>
+          <td>${p.targetEnd}</td>
+        </tr>
+      `).join("");
+    }
+
+    // Click a header to sort by that column; click again to reverse
+    document.querySelectorAll("th[data-key]").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.key;
+        sortAsc = sortKey === key ? !sortAsc : true;
+        sortKey = key;
+        renderTable();
+      });
+    });
+
+    document.getElementById("search").addEventListener("input", renderTable);
+    document.getElementById("statusFilter").addEventListener("change", renderTable);
+
+    renderKpis(data.projects);
+    renderTable();
+  </script>
+</body>
+</html>
