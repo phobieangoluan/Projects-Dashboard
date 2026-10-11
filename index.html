@@ -553,10 +553,20 @@
       document.getElementById("detail").scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    // Where the user was before the detail panel opened, so closing returns them there
+    let detailReturn = null;
+
     // One click handler for everything dynamic: project names, close buttons
     document.addEventListener("click", e => {
       const link = e.target.closest("[data-project]");
       if (link) {
+        // Save the position only when opening from a closed state
+        if (detailReturn === null) {
+          detailReturn = {
+            tab: document.querySelector(".tab.active").dataset.target,
+            scrollY: window.scrollY
+          };
+        }
         // Clicking a project in the pipeline switches to the summary tab first
         if (link.closest('[data-tab="pipeline"]')) showTab("summary");
         openDetail(link.dataset.project);
@@ -564,6 +574,11 @@
       }
       if (e.target.closest("[data-close-detail]")) {
         document.getElementById("detail").hidden = true;
+        if (detailReturn) {
+          showTab(detailReturn.tab);
+          window.scrollTo(0, detailReturn.scrollY);
+          detailReturn = null;
+        }
       }
     });
   </script>
