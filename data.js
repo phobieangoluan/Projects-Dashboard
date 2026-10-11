@@ -24,7 +24,8 @@ window.DASHBOARD_DATA = {
   ],
 
   // Project status values (scoping doc, "Project Status Breakdown")
-  states: ["In progress", "On hold", "Deferred", "Cancelled", "Closed"],
+  // Order matches the team's Lark Base dashboard. "Pending Assessment" = projects that need review.
+  states: ["In progress", "Pending Assessment", "Closed", "Deferred / Rejected", "Cancelled", "On hold"],
 
   // Project overview and ownership fields (scoping doc, section 3)
   projects: [
@@ -122,7 +123,7 @@ window.DASHBOARD_DATA = {
       projectType: "New development",
       deliveryTeam: "Delivery Team / PMO",
       stage: "Project Request",
-      state: "In progress",
+      state: "Pending Assessment",
       coordinator: null,
       deliveryLead: null,
       techLead: null,

@@ -77,6 +77,8 @@
     .pill.deferred { background: var(--grey); }
     .pill.cancelled, .pill.overdue { background: var(--red); }
     .pill.closed, .pill.completed { background: var(--green); }
+    .pill.pending-assessment { background: #7c5cc4; }
+    .pill.deferred-rejected { background: var(--grey); }
 
     .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
     .chip-count { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 110px; }
@@ -213,6 +215,20 @@
     </div>
 
     <div class="tab-panel" data-tab="summary">
+    <!-- Monthly cost trend and project handle per coordinator -->
+    <section class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <h2>Overall cost of PMO projects</h2>
+        <p class="note">Development cost by request month</p>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Project handle per coordinator</h2>
+        <p class="note" id="workloadNote"></p>
+        <div class="chart-box"><canvas id="workloadChart"></canvas></div>
+      </div>
+    </section>
+
     <!-- 4. Manpower per project -->
     <section class="card">
       <h2>Manpower per project</h2>
@@ -374,7 +390,7 @@
         type: "bar",
         data: {
           labels: D.states,
-          datasets: [{ label: "Projects", data: counts, backgroundColor: ["#2f6fdb", "#e0a100", "#8a94a3", "#d64545", "#2e9e5b"] }]
+          datasets: [{ label: "Projects", data: counts, backgroundColor: ["#2f6fdb", "#7c5cc4", "#2e9e5b", "#8a94a3", "#d64545", "#e0a100"] }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
@@ -399,7 +415,7 @@
 
     // ---- 3. End-to-end delivery pipeline ----
     function renderPipeline() {
-      const holdOrDone = p => p.state === "On hold" || p.state === "Deferred" ? "held" : (p.state === "Closed" ? "done" : "");
+      const holdOrDone = p => ["On hold", "Pending Assessment", "Deferred / Rejected"].includes(p.state) ? "held" : (p.state === "Closed" ? "done" : "");
       document.getElementById("pipeline").innerHTML = D.stages.map(stage => {
         const list = D.projects.filter(p => p.stage === stage);
         return `
@@ -477,8 +493,77 @@
       document.getElementById("overviewTable").innerHTML = projectTable(D.projects);
     }
 
+    // ---- Monthly cost trend and coordinator workload ----
+    function renderTrendAndWorkload() {
+      // Months from the earliest to the latest request, including months with no requests
+      const monthKeys = D.projects.map(p => p.requestDate.slice(0, 7)).sort();
+      let [y, m] = monthKeys[0].split("-").map(Number);
+      const [endY, endM] = monthKeys[monthKeys.length - 1].split("-").map(Number);
+      const keys = [];
+      while (y < endY || (y === endY && m <= endM)) {
+        keys.push(`${y}-${String(m).padStart(2, "0")}`);
+        m++;
+        if (m > 12) { m = 1; y++; }
+      }
+
+      const monthCost = keys.map(k => D.projects
+        .filter(p => p.requestDate.slice(0, 7) === k)
+        .reduce((sum, p) => sum + p.developmentCost, 0));
+      const monthLabel = k => {
+        const [yy, mm] = k.split("-").map(Number);
+        return new Date(yy, mm - 1, 1).toLocaleString("en", { month: "short", year: "numeric" });
+      };
+
+      new Chart(document.getElementById("trendChart"), {
+        type: "line",
+        data: {
+          labels: keys.map(monthLabel),
+          datasets: [{
+            label: "Development cost",
+            data: monthCost,
+            borderColor: "#2f6fdb",
+            backgroundColor: "rgba(47, 111, 219, 0.15)",
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { callback: v => "₱" + (v / 1000).toLocaleString("en-PH") + "k" } } }
+        }
+      });
+
+      // Projects per coordinator, with unassigned projects shown separately
+      const counts = {};
+      let unassigned = 0;
+      D.projects.forEach(p => {
+        if (p.coordinator) counts[p.coordinator] = (counts[p.coordinator] || 0) + 1;
+        else unassigned++;
+      });
+      const labels = Object.keys(counts);
+      const values = labels.map(l => counts[l]);
+      if (unassigned) { labels.push("Unassigned"); values.push(unassigned); }
+
+      document.getElementById("workloadNote").textContent =
+        `${D.projects.length} projects across ${Object.keys(counts).length} coordinators`;
+
+      new Chart(document.getElementById("workloadChart"), {
+        type: "pie",
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: ["#2f6fdb", "#2e9e5b", "#7c5cc4", "#e0a100", "#d64545", "#8a94a3"] }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: "right" } }
+        }
+      });
+    }
+
     renderKpis();
     renderCharts();
+    renderTrendAndWorkload();
     renderPipeline();
     renderManpower();
     renderActions();
