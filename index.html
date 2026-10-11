@@ -92,6 +92,13 @@
     .pill.delayed { background: var(--red); }
     .pill.completed { background: var(--blue); }
     .over { color: var(--red); font-weight: 600; }
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .chart-box { position: relative; height: 320px; }
     .empty { text-align: center; color: var(--muted); padding: 24px; }
   </style>
 </head>
@@ -104,6 +111,18 @@
   <main>
     <!-- Layer 1: KPI cards -->
     <section class="kpis" id="kpis"></section>
+
+    <!-- Charts: costing and delivery pipeline -->
+    <section class="charts">
+      <div class="panel">
+        <h2>Budget vs. actual</h2>
+        <div class="chart-box"><canvas id="budgetChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>Delivery pipeline</h2>
+        <div class="chart-box"><canvas id="stageChart"></canvas></div>
+      </div>
+    </section>
 
     <!-- Layer 2: project summary table -->
     <section>
@@ -138,6 +157,7 @@
     </section>
   </main>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="data.js"></script>
   <script>
     const data = window.DASHBOARD_DATA;
@@ -235,8 +255,47 @@
     document.getElementById("search").addEventListener("input", renderTable);
     document.getElementById("statusFilter").addEventListener("change", renderTable);
 
+    // Charts: budget vs. actual per project, and project count per delivery stage
+    function renderCharts(projects) {
+      const peso = v => "₱" + (v / 1000).toLocaleString("en-PH") + "k";
+
+      new Chart(document.getElementById("budgetChart"), {
+        type: "bar",
+        data: {
+          labels: projects.map(p => p.name),
+          datasets: [
+            { label: "Budget", data: projects.map(p => p.budget), backgroundColor: "#9fb8e8" },
+            { label: "Actual", data: projects.map(p => p.actual), backgroundColor: "#2f6fdb" }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+          scales: { y: { ticks: { callback: peso } } }
+        }
+      });
+
+      const counts = data.stages.map(stage => projects.filter(p => p.stage === stage).length);
+
+      new Chart(document.getElementById("stageChart"), {
+        type: "bar",
+        data: {
+          labels: data.stages,
+          datasets: [{ label: "Projects", data: counts, backgroundColor: "#2e9e5b" }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
     renderKpis(data.projects);
     renderTable();
+    renderCharts(data.projects);
   </script>
 </body>
 </html>
