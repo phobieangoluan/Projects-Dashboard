@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Delivery Team Dashboard</title>
+  <title>Delivery Team / PMO Dashboard</title>
   <style>
     :root {
       --bg: #f5f7fa;
@@ -15,6 +15,7 @@
       --amber: #e0a100;
       --red: #d64545;
       --blue: #2f6fdb;
+      --grey: #8a94a3;
     }
     * { box-sizing: border-box; }
     body {
@@ -22,280 +23,469 @@
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
+      font-size: 14px;
     }
-    header {
-      padding: 20px 32px;
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-    }
+    header { padding: 20px 32px; background: var(--card); border-bottom: 1px solid var(--border); }
     header h1 { margin: 0; font-size: 22px; }
-    header p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
-    main { padding: 24px 32px; max-width: 1200px; margin: 0 auto; }
+    header p { margin: 4px 0 0; color: var(--muted); }
+    main { padding: 24px 32px; max-width: 1240px; margin: 0 auto; }
+    h2 { font-size: 16px; margin: 0 0 4px; }
+    .note { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
 
-    .kpis {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    .kpi {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 18px;
-    }
-    .kpi-label { font-size: 13px; color: var(--muted); }
-    .kpi-value { font-size: 26px; font-weight: 600; margin-top: 6px; }
-    .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-    h2 { font-size: 16px; margin: 0 0 12px; }
-    .panel {
+    .card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 16px;
+      margin-bottom: 20px;
       overflow-x: auto;
     }
-    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
-    input, select {
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 14px;
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
     }
-    input { flex: 1; max-width: 280px; }
+    .kpi { cursor: pointer; transition: border-color 0.15s; }
+    .kpi:hover { border-color: var(--blue); }
+    .kpi-label { color: var(--muted); font-size: 13px; }
+    .kpi-value { font-size: 26px; font-weight: 600; margin-top: 6px; }
+    .kpi-sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
-    th {
-      cursor: pointer;
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      user-select: none;
-    }
-    th:hover { color: var(--text); }
-    .progress {
-      width: 100px; height: 8px; background: var(--border);
-      border-radius: 4px; overflow: hidden; display: inline-block;
-      vertical-align: middle; margin-right: 8px;
-    }
-    .progress span { display: block; height: 100%; background: var(--blue); }
-    .pill {
-      display: inline-block; padding: 3px 10px; border-radius: 999px;
-      font-size: 12px; font-weight: 600; color: #fff;
-    }
-    .pill.on-track { background: var(--green); }
-    .pill.at-risk { background: var(--amber); }
-    .pill.delayed { background: var(--red); }
-    .pill.completed { background: var(--blue); }
-    .over { color: var(--red); font-weight: 600; }
-    .charts {
+    .grid-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
+      gap: 20px;
     }
-    .chart-box { position: relative; height: 320px; }
-    .empty { text-align: center; color: var(--muted); padding: 24px; }
+    .grid-2 .card { margin-bottom: 0; }
+    .chart-box { position: relative; height: 280px; margin-top: 12px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .empty-msg { color: var(--muted); text-align: center; padding: 20px; }
+    .unassigned { color: var(--red); font-weight: 600; }
+    .over { color: var(--red); font-weight: 600; }
+
+    .pill {
+      display: inline-block; padding: 2px 9px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; color: #fff; background: var(--grey);
+      white-space: nowrap;
+    }
+    .pill.in-progress, .pill.pending { background: var(--blue); }
+    .pill.on-hold, .pill.in-progress-action { background: var(--amber); }
+    .pill.deferred { background: var(--grey); }
+    .pill.cancelled, .pill.overdue { background: var(--red); }
+    .pill.closed, .pill.completed { background: var(--green); }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .chip-count { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 110px; }
+    .chip-count strong { font-size: 18px; display: block; }
+    .chip-count span { color: var(--muted); font-size: 12px; }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    .stage {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfcfd;
+      min-height: 90px;
+    }
+    .stage-name { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+    .stage-name .count { color: var(--text); }
+    .project-tag {
+      display: inline-block; background: #eaf1fd; color: #1f4fa3;
+      border-radius: 6px; padding: 3px 8px; margin: 2px 4px 2px 0; font-size: 12px;
+    }
+    .project-tag.held { background: #fdf3d6; color: #7a5a00; }
+    .project-tag.done { background: #e2f4ea; color: #1d6b3d; }
+
+    .drill-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    button {
+      background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+      padding: 6px 12px; cursor: pointer; font-size: 13px;
+    }
+    button:hover { border-color: var(--blue); }
+    .tabs {
+      display: flex; gap: 4px; padding: 0 32px;
+      background: var(--card); border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      background: none; border: none; border-bottom: 3px solid transparent;
+      border-radius: 0; padding: 12px 16px; font-size: 14px;
+      color: var(--muted); cursor: pointer;
+    }
+    .tab:hover { border-color: transparent; color: var(--text); }
+    .tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--blue); }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Delivery Team Dashboard</h1>
-    <p>Projects, costing, and delivery status at a glance</p>
+    <h1>Delivery Team / PMO Dashboard</h1>
+    <p>Portfolio status, development cost, manpower, PMO action items, and end-to-end delivery progress</p>
   </header>
 
+  <nav class="tabs">
+    <button class="tab" data-target="summary">Summary</button>
+    <button class="tab" data-target="pipeline">Delivery Pipeline</button>
+  </nav>
+
   <main>
-    <!-- Layer 1: KPI cards -->
-    <section class="kpis" id="kpis"></section>
-
-    <!-- Charts: costing and delivery pipeline -->
-    <section class="charts">
-      <div class="panel">
-        <h2>Budget vs. actual</h2>
-        <div class="chart-box"><canvas id="budgetChart"></canvas></div>
+    <div class="tab-panel" data-tab="summary">
+    <!-- 1. Summary KPIs. Click a card to drill into its list. -->
+    <section class="kpis">
+      <div class="card kpi" data-view="requests">
+        <div class="kpi-label">Total project requests</div>
+        <div class="kpi-value" id="kpiRequests"></div>
+        <div class="kpi-sub">Click to view all requests</div>
       </div>
-      <div class="panel">
-        <h2>Delivery pipeline</h2>
-        <div class="chart-box"><canvas id="stageChart"></canvas></div>
+      <div class="card kpi" data-view="active">
+        <div class="kpi-label">Active projects</div>
+        <div class="kpi-value" id="kpiActive"></div>
+        <div class="kpi-sub">Clarification / Discovery to Monitoring</div>
+      </div>
+      <div class="card kpi" data-view="cost">
+        <div class="kpi-label">Overall development cost</div>
+        <div class="kpi-value" id="kpiCost"></div>
+        <div class="kpi-sub">Click to view cost by project</div>
+      </div>
+      <div class="card kpi" data-view="actions">
+        <div class="kpi-label">Open PMO action items</div>
+        <div class="kpi-value" id="kpiActions"></div>
+        <div class="kpi-sub" id="kpiActionsSub"></div>
+      </div>
+    </section>
+
+    <!-- Drill-down panel, shown when a KPI card is clicked -->
+    <section class="card" id="drill" hidden>
+      <div class="drill-head">
+        <h2 id="drillTitle"></h2>
+        <button id="drillClose">Close</button>
+      </div>
+      <div id="drillBody"></div>
+    </section>
+
+    <!-- 2. Project status breakdown and development cost -->
+    <section class="grid-2">
+      <div class="card">
+        <h2>Project status breakdown</h2>
+        <p class="note">Number of projects by current status</p>
+        <div class="chart-box"><canvas id="statusChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Development cost by project</h2>
+        <p class="note">Total development cost per project</p>
+        <div class="chart-box"><canvas id="costChart"></canvas></div>
       </div>
     </section>
 
-    <!-- Layer 2: project summary table -->
-    <section>
-      <h2>Projects</h2>
-      <div class="panel">
-        <div class="toolbar">
-          <input type="search" id="search" placeholder="Search by name, client, or owner" />
-          <select id="statusFilter">
-            <option value="">All statuses</option>
-            <option>On Track</option>
-            <option>At Risk</option>
-            <option>Delayed</option>
-            <option>Completed</option>
-          </select>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th data-key="name">Project</th>
-              <th data-key="owner">Owner</th>
-              <th data-key="stage">Stage</th>
-              <th data-key="status">Status</th>
-              <th data-key="percentComplete">Progress</th>
-              <th data-key="budget">Budget</th>
-              <th data-key="actual">Actual</th>
-              <th data-key="targetEnd">Target end</th>
-            </tr>
-          </thead>
-          <tbody id="projectRows"></tbody>
-        </table>
-      </div>
+    </div>
+
+    <div class="tab-panel" data-tab="pipeline" hidden>
+    <!-- 3. End-to-end delivery process -->
+    <section class="card" style="margin-top:20px">
+      <h2>End-to-end delivery process</h2>
+      <p class="note">Each project mapped to its current stage. Grey-amber tags are on hold, green tags are closed.</p>
+      <div class="pipeline" id="pipeline"></div>
     </section>
+
+    </div>
+
+    <div class="tab-panel" data-tab="summary">
+    <!-- 4. Manpower per project -->
+    <section class="card">
+      <h2>Manpower per project</h2>
+      <p class="note" id="manpowerSummary"></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Coordinator</th>
+            <th>Delivery lead</th>
+            <th>Tech lead</th>
+            <th>Developers assigned</th>
+          </tr>
+        </thead>
+        <tbody id="manpowerRows"></tbody>
+      </table>
+      <div id="manpowerExtra" style="margin-top:14px"></div>
+    </section>
+
+    <!-- 5. PMO action items -->
+    <section class="card">
+      <h2>PMO action items</h2>
+      <p class="note">Overdue is calculated from the due date for any item not yet completed</p>
+      <div class="chips" id="actionSummary"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Project</th>
+            <th>Action</th>
+            <th>Owner</th>
+            <th>Due</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="actionRows"></tbody>
+      </table>
+    </section>
+
+    <!-- 6. Project overview -->
+    <section class="card">
+      <h2>Project overview</h2>
+      <p class="note">Request details, ownership, and current status for every project</p>
+      <div id="overviewTable"></div>
+    </section>
+    </div>
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="data.js"></script>
   <script>
-    const data = window.DASHBOARD_DATA;
-    let sortKey = "name";
-    let sortAsc = true;
+    const D = window.DASHBOARD_DATA;
+    const TODAY = new Date();
+    TODAY.setHours(0, 0, 0, 0);
 
     const money = n => "₱" + Number(n).toLocaleString("en-PH");
-    const statusClass = s => s.toLowerCase().replace(/\s+/g, "-");
+    const cls = s => s.toLowerCase().replace(/[^a-z]+/g, "-").replace(/-$/, "");
+    const stageIndex = s => D.stages.indexOf(s);
+    const ACTIVE_FROM = stageIndex("Clarification / Discovery");
+    const ACTIVE_TO = stageIndex("Monitoring & Continuous Improvement");
 
-    // Layer 1: KPI cards computed from the data
-    function renderKpis(projects) {
-      const total = projects.length;
-      const onTrack = projects.filter(p => p.status === "On Track").length;
-      const atRisk = projects.filter(p => p.status === "At Risk" || p.status === "Delayed").length;
-      const budget = projects.reduce((sum, p) => sum + p.budget, 0);
-      const actual = projects.reduce((sum, p) => sum + p.actual, 0);
-      const avg = total ? Math.round(projects.reduce((s, p) => s + p.percentComplete, 0) / total) : 0;
-      const spendPct = budget ? Math.round((actual / budget) * 100) : 0;
+    // Scoping doc: active = In progress, between Clarification / Discovery and Monitoring
+    const isActive = p => p.state === "In progress"
+      && stageIndex(p.stage) >= ACTIVE_FROM
+      && stageIndex(p.stage) <= ACTIVE_TO;
 
-      document.getElementById("kpis").innerHTML = `
-        <div class="kpi">
-          <div class="kpi-label">Total projects</div>
-          <div class="kpi-value">${total}</div>
-          <div class="kpi-sub">${onTrack} on track</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Needs attention</div>
-          <div class="kpi-value">${atRisk}</div>
-          <div class="kpi-sub">At risk or delayed</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Budget spent</div>
-          <div class="kpi-value">${spendPct}%</div>
-          <div class="kpi-sub">${money(actual)} of ${money(budget)}</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Average progress</div>
-          <div class="kpi-value">${avg}%</div>
-          <div class="kpi-sub">Across all projects</div>
-        </div>
-      `;
+    // Overdue is calculated: not completed and past its due date
+    const actionStatus = a => {
+      if (a.status === "Completed") return "Completed";
+      return new Date(a.dueDate) < TODAY ? "Overdue" : a.status;
+    };
+    const openActions = () => D.actionItems.filter(a => actionStatus(a) !== "Completed");
+    const projectById = id => D.projects.find(p => p.id === id);
+
+    // ---- 1. KPI cards ----
+    function renderKpis() {
+      const totalCost = D.projects.reduce((sum, p) => sum + p.developmentCost, 0);
+      const overdue = D.actionItems.filter(a => actionStatus(a) === "Overdue").length;
+      document.getElementById("kpiRequests").textContent = D.projects.length;
+      document.getElementById("kpiActive").textContent = D.projects.filter(isActive).length;
+      document.getElementById("kpiCost").textContent = money(totalCost);
+      document.getElementById("kpiActions").textContent = openActions().length;
+      document.getElementById("kpiActionsSub").textContent = overdue + " overdue";
     }
 
-    // Layer 2: filterable, sortable project table
-    function renderTable() {
-      const query = document.getElementById("search").value.toLowerCase();
-      const statusFilter = document.getElementById("statusFilter").value;
-
-      let rows = data.projects.filter(p => {
-        const matchesText = [p.name, p.client, p.owner].join(" ").toLowerCase().includes(query);
-        const matchesStatus = !statusFilter || p.status === statusFilter;
-        return matchesText && matchesStatus;
-      });
-
-      rows.sort((a, b) => {
-        const av = a[sortKey], bv = b[sortKey];
-        if (av < bv) return sortAsc ? -1 : 1;
-        if (av > bv) return sortAsc ? 1 : -1;
-        return 0;
-      });
-
-      const tbody = document.getElementById("projectRows");
-      if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="empty">No projects match your filters.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = rows.map(p => `
-        <tr>
-          <td><strong>${p.name}</strong><br><span style="color:var(--muted);font-size:12px">${p.client}</span></td>
-          <td>${p.owner}</td>
-          <td>${p.stage}</td>
-          <td><span class="pill ${statusClass(p.status)}">${p.status}</span></td>
-          <td>
-            <span class="progress"><span style="width:${p.percentComplete}%"></span></span>
-            ${p.percentComplete}%
-          </td>
-          <td>${money(p.budget)}</td>
-          <td class="${p.actual > p.budget ? "over" : ""}">${money(p.actual)}</td>
-          <td>${p.targetEnd}</td>
-        </tr>
-      `).join("");
+    // ---- Drill-down tables ----
+    function projectTable(list) {
+      if (!list.length) return `<div class="empty-msg">No projects to show.</div>`;
+      return `
+        <table>
+          <thead><tr>
+            <th>Project</th><th>Owner</th><th>Requested</th><th>Department</th>
+            <th>Type</th><th>Delivery team</th><th>Stage</th><th>Status</th>
+            <th>Progress</th><th>Dev. cost</th>
+          </tr></thead>
+          <tbody>
+            ${list.map(p => `
+              <tr>
+                <td><strong>${p.name}</strong><br><span class="note">${p.id}</span></td>
+                <td>${p.owner}</td>
+                <td>${p.requestDate}</td>
+                <td>${p.requestingDepartment}</td>
+                <td>${p.projectType}</td>
+                <td>${p.deliveryTeam}</td>
+                <td>${p.stage}</td>
+                <td><span class="pill ${cls(p.state)}">${p.state}</span></td>
+                <td>${p.progress}%</td>
+                <td>${money(p.developmentCost)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>`;
     }
 
-    // Click a header to sort by that column; click again to reverse
-    document.querySelectorAll("th[data-key]").forEach(th => {
-      th.addEventListener("click", () => {
-        const key = th.dataset.key;
-        sortAsc = sortKey === key ? !sortAsc : true;
-        sortKey = key;
-        renderTable();
+    function actionTable(list) {
+      if (!list.length) return `<div class="empty-msg">No action items to show.</div>`;
+      return `
+        <table>
+          <thead><tr><th>ID</th><th>Project</th><th>Action</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
+          <tbody>
+            ${list.map(a => {
+              const st = actionStatus(a);
+              return `<tr>
+                <td>${a.id}</td>
+                <td>${projectById(a.projectId)?.name || a.projectId}</td>
+                <td>${a.description}</td>
+                <td>${a.owner}</td>
+                <td class="${st === "Overdue" ? "over" : ""}">${a.dueDate}</td>
+                <td><span class="pill ${cls(st)}">${st}</span></td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>`;
+    }
+
+    const drillViews = {
+      requests: () => ["All project requests", projectTable(D.projects)],
+      active: () => ["Active projects", projectTable(D.projects.filter(isActive))],
+      cost: () => ["Development cost by project", projectTable([...D.projects].sort((a, b) => b.developmentCost - a.developmentCost))],
+      actions: () => ["Open PMO action items", actionTable(openActions())]
+    };
+
+    document.querySelectorAll("[data-view]").forEach(card => {
+      card.addEventListener("click", () => {
+        const [title, html] = drillViews[card.dataset.view]();
+        document.getElementById("drillTitle").textContent = title;
+        document.getElementById("drillBody").innerHTML = html;
+        document.getElementById("drill").hidden = false;
+        document.getElementById("drill").scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
+    document.getElementById("drillClose").addEventListener("click", () => {
+      document.getElementById("drill").hidden = true;
+    });
 
-    document.getElementById("search").addEventListener("input", renderTable);
-    document.getElementById("statusFilter").addEventListener("change", renderTable);
-
-    // Charts: budget vs. actual per project, and project count per delivery stage
-    function renderCharts(projects) {
-      const peso = v => "₱" + (v / 1000).toLocaleString("en-PH") + "k";
-
-      new Chart(document.getElementById("budgetChart"), {
+    // ---- 2. Charts ----
+    function renderCharts() {
+      const counts = D.states.map(s => D.projects.filter(p => p.state === s).length);
+      new Chart(document.getElementById("statusChart"), {
         type: "bar",
         data: {
-          labels: projects.map(p => p.name),
-          datasets: [
-            { label: "Budget", data: projects.map(p => p.budget), backgroundColor: "#9fb8e8" },
-            { label: "Actual", data: projects.map(p => p.actual), backgroundColor: "#2f6fdb" }
-          ]
+          labels: D.states,
+          datasets: [{ label: "Projects", data: counts, backgroundColor: ["#2f6fdb", "#e0a100", "#8a94a3", "#d64545", "#2e9e5b"] }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: "bottom" } },
-          scales: { y: { ticks: { callback: peso } } }
-        }
-      });
-
-      const counts = data.stages.map(stage => projects.filter(p => p.stage === stage).length);
-
-      new Chart(document.getElementById("stageChart"), {
-        type: "bar",
-        data: {
-          labels: data.stages,
-          datasets: [{ label: "Projects", data: counts, backgroundColor: "#2e9e5b" }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
         }
       });
+
+      new Chart(document.getElementById("costChart"), {
+        type: "bar",
+        data: {
+          labels: D.projects.map(p => p.name),
+          datasets: [{ label: "Development cost", data: D.projects.map(p => p.developmentCost), backgroundColor: "#2f6fdb" }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { ticks: { callback: v => "₱" + (v / 1000).toLocaleString("en-PH") + "k" } } }
+        }
+      });
     }
 
-    renderKpis(data.projects);
-    renderTable();
-    renderCharts(data.projects);
+    // ---- 3. End-to-end delivery pipeline ----
+    function renderPipeline() {
+      const holdOrDone = p => p.state === "On hold" || p.state === "Deferred" ? "held" : (p.state === "Closed" ? "done" : "");
+      document.getElementById("pipeline").innerHTML = D.stages.map(stage => {
+        const list = D.projects.filter(p => p.stage === stage);
+        return `
+          <div class="stage">
+            <div class="stage-name">${stage} <span class="count">(${list.length})</span></div>
+            ${list.map(p => `<span class="project-tag ${holdOrDone(p)}">${p.name}</span>`).join("") || `<span class="note">None</span>`}
+          </div>`;
+      }).join("");
+    }
+
+    // ---- 4. Manpower per project ----
+    function renderManpower() {
+      // Build one record per person: their roles and the projects they work on
+      const people = {};
+      const add = (name, role, pid) => {
+        if (!name) return;
+        people[name] = people[name] || { roles: new Set(), projects: new Set() };
+        people[name].roles.add(role);
+        people[name].projects.add(pid);
+      };
+      D.projects.forEach(p => {
+        add(p.coordinator, "Coordinator", p.id);
+        add(p.deliveryLead, "Delivery Lead", p.id);
+        add(p.techLead, "Tech Lead", p.id);
+        p.developers.forEach(d => add(d, "Developer", p.id));
+      });
+
+      const names = Object.keys(people);
+      const multi = names.filter(n => people[n].projects.size > 1);
+      const unassigned = [];
+      D.projects.forEach(p => {
+        if (!p.coordinator) unassigned.push(`${p.name}: Coordinator`);
+        if (!p.deliveryLead) unassigned.push(`${p.name}: Delivery Lead`);
+        if (!p.techLead) unassigned.push(`${p.name}: Tech Lead`);
+        if (!p.developers.length) unassigned.push(`${p.name}: Developers`);
+      });
+
+      document.getElementById("manpowerSummary").textContent =
+        `${names.length} people assigned across ${D.projects.length} projects. ${multi.length} work on more than one project.`;
+
+      document.getElementById("manpowerRows").innerHTML = D.projects.map(p => `
+        <tr>
+          <td><strong>${p.name}</strong></td>
+          <td class="${p.coordinator ? "" : "unassigned"}">${p.coordinator || "Unassigned"}</td>
+          <td class="${p.deliveryLead ? "" : "unassigned"}">${p.deliveryLead || "Unassigned"}</td>
+          <td class="${p.techLead ? "" : "unassigned"}">${p.techLead || "Unassigned"}</td>
+          <td class="${p.developers.length ? "" : "unassigned"}">${p.developers.length ? p.developers.join(", ") : "Unassigned"}</td>
+        </tr>`).join("");
+
+      document.getElementById("manpowerExtra").innerHTML = `
+        <div class="grid-2">
+          <div>
+            <strong>Resources supporting multiple projects</strong>
+            <p class="note">${multi.length ? multi.map(n => `${n} (${people[n].projects.size} projects)`).join(", ") : "None"}</p>
+          </div>
+          <div>
+            <strong>Unassigned resource requirements</strong>
+            <p class="note">${unassigned.length ? unassigned.join("<br>") : "None"}</p>
+          </div>
+        </div>`;
+    }
+
+    // ---- 5. PMO action items ----
+    function renderActions() {
+      const statuses = ["Overdue", "Pending", "In Progress", "Completed"];
+      const count = s => D.actionItems.filter(a => actionStatus(a) === s).length;
+      document.getElementById("actionSummary").innerHTML = statuses.map(s => `
+        <div class="chip-count"><strong>${count(s)}</strong><span>${s}</span></div>`).join("");
+      document.getElementById("actionRows").innerHTML = actionTable(D.actionItems)
+        .replace(/^[\s\S]*?<tbody>|<\/tbody>[\s\S]*$/g, "");
+    }
+
+    // ---- 6. Project overview ----
+    function renderOverview() {
+      document.getElementById("overviewTable").innerHTML = projectTable(D.projects);
+    }
+
+    renderKpis();
+    renderCharts();
+    renderPipeline();
+    renderManpower();
+    renderActions();
+    renderOverview();
+
+    // ---- Tabs: Monitor 1 (summary) and Monitor 2 (pipeline) ----
+    // The active tab is stored in the URL hash, so
+    // index.html#summary and index.html#pipeline can each open in its own window.
+    function showTab(name) {
+      document.querySelectorAll("[data-tab]").forEach(el => {
+        el.hidden = el.dataset.tab !== name;
+      });
+      document.querySelectorAll(".tab").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.target === name);
+      });
+      history.replaceState(null, "", "#" + name);
+    }
+
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => showTab(btn.dataset.target));
+    });
+
+    showTab(location.hash === "#pipeline" ? "pipeline" : "summary");
   </script>
 </body>
 </html>
